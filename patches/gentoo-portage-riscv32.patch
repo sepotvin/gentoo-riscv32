@@ -1,0 +1,426 @@
+diff --git a/eclass/multilib-build.eclass b/eclass/multilib-build.eclass
+index 17cd7da0d18..7a89a7fb82f 100644
+--- a/eclass/multilib-build.eclass
++++ b/eclass/multilib-build.eclass
+@@ -48,6 +48,8 @@ _MULTILIB_FLAGS=(
+ 	abi_mips_o32:o32
+ #	abi_ppc_32:ppc,ppc_aix,ppc_macos
+ #	abi_ppc_64:ppc64
++	abi_riscv_ilp32:ilp32
++	abi_riscv_ilp32d:ilp32d
+ 	abi_s390_32:s390
+ 	abi_s390_64:s390x
+ )
+@@ -490,6 +492,12 @@ multilib_prepare_wrappers() {
+ #	elif(_MIPS_SIM == _ABIO32) /* o32 */
+ #		error "abi_mips_o32 not supported by the package."
+ #	endif
++#elif defined(__riscv)
++#	if defined(__riscv_d)
++#		error "abi_riscv_ilp32d not supported by the package."
++#	else
++#		error "abi_riscv_ilp32 not supported by the package."
++#	endif
+ #elif defined(__sparc__)
+ #	if defined(__arch64__)
+ #		error "abi_sparc_64 not supported by the package."
+diff --git a/profiles/arch/base/use.mask b/profiles/arch/base/use.mask
+index b401aee243d..ac67afe4dc8 100644
+--- a/profiles/arch/base/use.mask
++++ b/profiles/arch/base/use.mask
+@@ -199,6 +199,8 @@ abi_mips_n32
+ abi_mips_n64
+ abi_ppc_32
+ abi_ppc_64
++abi_riscv_ilp32
++abi_riscv_ilp32d
+ abi_s390_32
+ abi_s390_64
+ 
+diff --git a/profiles/arch/riscv/rv32imac/ilp32/make.defaults b/profiles/arch/riscv/rv32imac/ilp32/make.defaults
+index 702bf0db566..fe92f93471e 100644
+--- a/profiles/arch/riscv/rv32imac/ilp32/make.defaults
++++ b/profiles/arch/riscv/rv32imac/ilp32/make.defaults
+@@ -15,3 +15,6 @@ CFLAGS="-O2 -pipe -march=rv32imac -mabi=ilp32"
+ CXXFLAGS="${CFLAGS}"
+ FFLAGS="${CFLAGS}"
+ FCFLAGS="${CFLAGS}"
++
++ABI_RISCV="ilp32"
++IUSE_IMPLICIT="abi_riscv_ilp32"
+diff --git a/profiles/arch/riscv/rv32imac/ilp32/parent b/profiles/arch/riscv/rv32imac/ilp32/parent
+new file mode 100644
+index 00000000000..f3229c5b987
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/ilp32/parent
+@@ -0,0 +1 @@
++..
+diff --git a/profiles/arch/riscv/rv32imac/ilp32d/make.defaults b/profiles/arch/riscv/rv32imac/ilp32d/make.defaults
+index d21fdce6278..23d62e47551 100644
+--- a/profiles/arch/riscv/rv32imac/ilp32d/make.defaults
++++ b/profiles/arch/riscv/rv32imac/ilp32d/make.defaults
+@@ -15,3 +15,6 @@ CFLAGS="-O2 -pipe -march=rv32imafdc -mabi=ilp32d"
+ CXXFLAGS="${CFLAGS}"
+ FFLAGS="${CFLAGS}"
+ FCFLAGS="${CFLAGS}"
++
++ABI_RISCV="ilp32d"
++IUSE_IMPLICIT="abi_riscv_ilp32d"
+diff --git a/profiles/arch/riscv/rv32imac/ilp32d/package.mask b/profiles/arch/riscv/rv32imac/ilp32d/package.mask
+deleted file mode 100644
+index fae8be79335..00000000000
+--- a/profiles/arch/riscv/rv32imac/ilp32d/package.mask
++++ /dev/null
+@@ -1,5 +0,0 @@
+-# Copyright 2020 Gentoo Authors
+-# Distributed under the terms of the GNU General Public License v2
+-
+-# sys-libs/libseccomp has not been ported to rv32 yet
+-sys-libs/libseccomp
+diff --git a/profiles/arch/riscv/rv32imac/ilp32d/parent b/profiles/arch/riscv/rv32imac/ilp32d/parent
+new file mode 100644
+index 00000000000..f3229c5b987
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/ilp32d/parent
+@@ -0,0 +1 @@
++..
+diff --git a/profiles/arch/riscv/rv32imac/ilp32d/use.mask b/profiles/arch/riscv/rv32imac/ilp32d/use.mask
+deleted file mode 100644
+index 9779cbad81b..00000000000
+--- a/profiles/arch/riscv/rv32imac/ilp32d/use.mask
++++ /dev/null
+@@ -1,5 +0,0 @@
+-# Copyright 2019-2020 Gentoo Authors
+-# Distributed under the terms of the GNU General Public License v2
+-
+-# sys-libs/libseccomp has not been ported to rv32 yet
+-seccomp
+diff --git a/profiles/arch/riscv/rv32imac/make.defaults b/profiles/arch/riscv/rv32imac/make.defaults
+deleted file mode 100644
+index da381b453f8..00000000000
+--- a/profiles/arch/riscv/rv32imac/make.defaults
++++ /dev/null
+@@ -1,14 +0,0 @@
+-# Copyright 2019 Gentoo Authors
+-# Distributed under the terms of the GNU General Public License v2
+-
+-# RISC-V profile for rv32imac multilib
+-#
+-# This immediate profile is ONLY useful for internal purposes. It can NOT
+-# generate stages or a working system due to limitations in gcc.
+-
+-CHOST="riscv32-unknown-linux-gnu"
+-
+-# Multilib ABIs
+-MULTILIB_ABIS="ilp32d ilp32"
+-DEFAULT_ABI="ilp32d"
+-ABI="ilp32d"
+diff --git a/profiles/arch/riscv/rv32imac/multilib/eapi b/profiles/arch/riscv/rv32imac/multilib/eapi
+new file mode 100644
+index 00000000000..7ed6ff82de6
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/eapi
+@@ -0,0 +1 @@
++5
+diff --git a/profiles/arch/riscv/rv32imac/multilib/ilp32/eapi b/profiles/arch/riscv/rv32imac/multilib/ilp32/eapi
+new file mode 100644
+index 00000000000..7ed6ff82de6
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/ilp32/eapi
+@@ -0,0 +1 @@
++5
+diff --git a/profiles/arch/riscv/rv32imac/multilib/ilp32/make.defaults b/profiles/arch/riscv/rv32imac/multilib/ilp32/make.defaults
+new file mode 100644
+index 00000000000..a8c82aa06f3
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/ilp32/make.defaults
+@@ -0,0 +1,11 @@
++# Copyright 2022 Gentoo Authors
++# Distributed under the terms of the GNU General Public License v2
++
++DEFAULT_ABI="ilp32"
++ABI="${DEFAULT_ABI}"
++
++ABI_RISCV="ilp32"
++IUSE_IMPLICIT="abi_riscv_ilp32"
++
++# One-level dir for the default abi
++LIBDIR_ilp32d="lib"
+diff --git a/profiles/arch/riscv/rv32imac/multilib/ilp32/parent b/profiles/arch/riscv/rv32imac/multilib/ilp32/parent
+new file mode 100644
+index 00000000000..f3229c5b987
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/ilp32/parent
+@@ -0,0 +1 @@
++..
+diff --git a/profiles/arch/riscv/rv32imac/multilib/ilp32/use.force b/profiles/arch/riscv/rv32imac/multilib/ilp32/use.force
+new file mode 100644
+index 00000000000..bed1396c3eb
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/ilp32/use.force
+@@ -0,0 +1,4 @@
++# Copyright 2022 Gentoo Authors
++# Distributed under the terms of the GNU General Public License v2
++
++abi_riscv_ilp32
+diff --git a/profiles/arch/riscv/rv32imac/multilib/ilp32d/eapi b/profiles/arch/riscv/rv32imac/multilib/ilp32d/eapi
+new file mode 100644
+index 00000000000..7ed6ff82de6
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/ilp32d/eapi
+@@ -0,0 +1 @@
++5
+diff --git a/profiles/arch/riscv/rv32imac/multilib/ilp32d/make.defaults b/profiles/arch/riscv/rv32imac/multilib/ilp32d/make.defaults
+new file mode 100644
+index 00000000000..a919add0c36
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/ilp32d/make.defaults
+@@ -0,0 +1,11 @@
++# Copyright 2022 Gentoo Authors
++# Distributed under the terms of the GNU General Public License v2
++
++DEFAULT_ABI="ilp32d"
++ABI="${DEFAULT_ABI}"
++
++ABI_RISCV="ilp32d"
++IUSE_IMPLICIT="abi_riscv_ilp32d"
++
++# One-level dir for the default abi
++LIBDIR_ilp32d="lib"
+diff --git a/profiles/arch/riscv/rv32imac/multilib/ilp32d/parent b/profiles/arch/riscv/rv32imac/multilib/ilp32d/parent
+new file mode 100644
+index 00000000000..f3229c5b987
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/ilp32d/parent
+@@ -0,0 +1 @@
++..
+diff --git a/profiles/arch/riscv/rv32imac/multilib/ilp32d/use.force b/profiles/arch/riscv/rv32imac/multilib/ilp32d/use.force
+new file mode 100644
+index 00000000000..d06a1effe73
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/ilp32d/use.force
+@@ -0,0 +1,4 @@
++# Copyright 2022 Gentoo Authors
++# Distributed under the terms of the GNU General Public License v2
++
++abi_riscv_ilp32d
+diff --git a/profiles/arch/riscv/rv32imac/multilib/make.defaults b/profiles/arch/riscv/rv32imac/multilib/make.defaults
+new file mode 100644
+index 00000000000..60ae64c738f
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/make.defaults
+@@ -0,0 +1,20 @@
++# Copyright 2022 Gentoo Authors
++# Distributed under the terms of the GNU General Public License v2
++
++PROFILE_ARCH="riscv32"
++
++MULTILIB_ABIS="ilp32 ilp32d"
++
++CHOST="riscv32-unknown-linux-gnu"
++CFLAGS="-O2 -pipe"
++CXXFLAGS="${CFLAGS}"
++FFLAGS="${CFLAGS}"
++FCFLAGS="${CFLAGS}"
++
++CFLAGS_ilp32="-march=rv32imac -mabi=ilp32"
++CHOST_ilp32="${CHOST}"
++
++CFLAGS_ilp32d="-march=rv32imafdc -mabi=ilp32d"
++CHOST_ilp32d="${CHOST}"
++
++USE_EXPAND_HIDDEN="-ABI_RISCV"
+diff --git a/profiles/arch/riscv/rv32imac/multilib/parent b/profiles/arch/riscv/rv32imac/multilib/parent
+new file mode 100644
+index 00000000000..a5b4126260c
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/parent
+@@ -0,0 +1,2 @@
++..
++../../../../features/multilib
+diff --git a/profiles/arch/riscv/rv32imac/multilib/use.force b/profiles/arch/riscv/rv32imac/multilib/use.force
+new file mode 100644
+index 00000000000..8e0c0200867
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/use.force
+@@ -0,0 +1,4 @@
++# Copyright 2022 Gentoo Authors
++# Distributed under the terms of the GNU General Public License v2
++
++multilib
+diff --git a/profiles/arch/riscv/rv32imac/multilib/use.mask b/profiles/arch/riscv/rv32imac/multilib/use.mask
+new file mode 100644
+index 00000000000..b3678a1b5f7
+--- /dev/null
++++ b/profiles/arch/riscv/rv32imac/multilib/use.mask
+@@ -0,0 +1,6 @@
++# Copyright 2022 Gentoo Authors
++# Distributed under the terms of the GNU General Public License v2
++
++# Unmask the multilib flags for this arch.
++-abi_riscv_ilp32
++-abi_riscv_ilp32d
+diff --git a/profiles/arch/riscv/rv32imac/ilp32/package.mask b/profiles/arch/riscv/rv32imac/package.mask
+similarity index 100%
+rename from profiles/arch/riscv/rv32imac/ilp32/package.mask
+rename to profiles/arch/riscv/rv32imac/package.mask
+diff --git a/profiles/arch/riscv/rv32imac/ilp32/use.mask b/profiles/arch/riscv/rv32imac/use.mask
+similarity index 100%
+rename from profiles/arch/riscv/rv32imac/ilp32/use.mask
+rename to profiles/arch/riscv/rv32imac/use.mask
+diff --git a/profiles/base/make.defaults b/profiles/base/make.defaults
+index 8b1a489be4a..a9b7af932aa 100644
+--- a/profiles/base/make.defaults
++++ b/profiles/base/make.defaults
+@@ -13,11 +13,11 @@ USE_EXPAND_VALUES_USERLAND="BSD GNU"
+ 
+ # Env vars to expand into USE vars.  Modifying this requires prior
+ # discussion on gentoo-dev@lists.gentoo.org.
+-USE_EXPAND="ABI_MIPS ABI_PPC ABI_S390 ABI_X86 ADA_TARGET ALSA_CARDS APACHE2_MODULES APACHE2_MPMS CALLIGRA_FEATURES CAMERAS COLLECTD_PLUGINS CPU_FLAGS_ARM CPU_FLAGS_PPC CPU_FLAGS_X86 CURL_SSL ELIBC FFTOOLS GPSD_PROTOCOLS GRUB_PLATFORMS INPUT_DEVICES KERNEL L10N LCD_DEVICES LIBREOFFICE_EXTENSIONS LLVM_TARGETS LUA_SINGLE_TARGET LUA_TARGETS MONKEYD_PLUGINS NGINX_MODULES_HTTP NGINX_MODULES_MAIL NGINX_MODULES_STREAM OFED_DRIVERS OFFICE_IMPLEMENTATION OPENMPI_FABRICS OPENMPI_OFED_FEATURES OPENMPI_RM PHP_TARGETS POSTGRES_TARGETS PYTHON_SINGLE_TARGET PYTHON_TARGETS QEMU_SOFTMMU_TARGETS QEMU_USER_TARGETS ROS_MESSAGES RUBY_TARGETS SANE_BACKENDS USERLAND UWSGI_PLUGINS VIDEO_CARDS VOICEMAIL_STORAGE XTABLES_ADDONS"
++USE_EXPAND="ABI_MIPS ABI_PPC ABI_RISCV ABI_S390 ABI_X86 ADA_TARGET ALSA_CARDS APACHE2_MODULES APACHE2_MPMS CALLIGRA_FEATURES CAMERAS COLLECTD_PLUGINS CPU_FLAGS_ARM CPU_FLAGS_PPC CPU_FLAGS_X86 CURL_SSL ELIBC FFTOOLS GPSD_PROTOCOLS GRUB_PLATFORMS INPUT_DEVICES KERNEL L10N LCD_DEVICES LIBREOFFICE_EXTENSIONS LLVM_TARGETS LUA_SINGLE_TARGET LUA_TARGETS MONKEYD_PLUGINS NGINX_MODULES_HTTP NGINX_MODULES_MAIL NGINX_MODULES_STREAM OFED_DRIVERS OFFICE_IMPLEMENTATION OPENMPI_FABRICS OPENMPI_OFED_FEATURES OPENMPI_RM PHP_TARGETS POSTGRES_TARGETS PYTHON_SINGLE_TARGET PYTHON_TARGETS QEMU_SOFTMMU_TARGETS QEMU_USER_TARGETS ROS_MESSAGES RUBY_TARGETS SANE_BACKENDS USERLAND UWSGI_PLUGINS VIDEO_CARDS VOICEMAIL_STORAGE XTABLES_ADDONS"
+ 
+ # USE_EXPAND variables whose contents are not shown in package manager
+ # output. Changes need discussion on gentoo-dev.
+-USE_EXPAND_HIDDEN="USERLAND KERNEL ELIBC ABI_MIPS ABI_PPC ABI_S390 ABI_X86 CPU_FLAGS_ARM CPU_FLAGS_PPC CPU_FLAGS_X86"
++USE_EXPAND_HIDDEN="USERLAND KERNEL ELIBC ABI_MIPS ABI_PPC ABI_RISCV ABI_S390 ABI_X86 CPU_FLAGS_ARM CPU_FLAGS_PPC CPU_FLAGS_X86"
+ 
+ CONFIG_PROTECT="/etc"
+ CONFIG_PROTECT_MASK="/etc/env.d /etc/gconf"
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/ilp32/systemd/eapi b/profiles/default/linux/riscv/20.0/rv32imac/ilp32/systemd/eapi
+new file mode 100644
+index 00000000000..7ed6ff82de6
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/ilp32/systemd/eapi
+@@ -0,0 +1 @@
++5
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/ilp32/systemd/parent b/profiles/default/linux/riscv/20.0/rv32imac/ilp32/systemd/parent
+new file mode 100644
+index 00000000000..44f88d3e2df
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/ilp32/systemd/parent
+@@ -0,0 +1,2 @@
++..
++../../../../../../../targets/systemd
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/ilp32d/systemd/eapi b/profiles/default/linux/riscv/20.0/rv32imac/ilp32d/systemd/eapi
+new file mode 100644
+index 00000000000..7ed6ff82de6
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/ilp32d/systemd/eapi
+@@ -0,0 +1 @@
++5
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/ilp32d/systemd/parent b/profiles/default/linux/riscv/20.0/rv32imac/ilp32d/systemd/parent
+new file mode 100644
+index 00000000000..44f88d3e2df
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/ilp32d/systemd/parent
+@@ -0,0 +1,2 @@
++..
++../../../../../../../targets/systemd
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/multilib/eapi b/profiles/default/linux/riscv/20.0/rv32imac/multilib/eapi
+new file mode 100644
+index 00000000000..7ed6ff82de6
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/multilib/eapi
+@@ -0,0 +1 @@
++5
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/eapi b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/eapi
+new file mode 100644
+index 00000000000..7ed6ff82de6
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/eapi
+@@ -0,0 +1 @@
++5
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/parent b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/parent
+new file mode 100644
+index 00000000000..b7cb049f4d1
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/parent
+@@ -0,0 +1,2 @@
++..
++../../../../../../../arch/riscv/rv32imac/multilib/ilp32
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/systemd/eapi b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/systemd/eapi
+new file mode 100644
+index 00000000000..7ed6ff82de6
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/systemd/eapi
+@@ -0,0 +1 @@
++5
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/systemd/parent b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/systemd/parent
+new file mode 100644
+index 00000000000..f7739b40587
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32/systemd/parent
+@@ -0,0 +1,2 @@
++..
++../../../../../../../../targets/systemd
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/eapi b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/eapi
+new file mode 100644
+index 00000000000..7ed6ff82de6
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/eapi
+@@ -0,0 +1 @@
++5
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/parent b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/parent
+new file mode 100644
+index 00000000000..f592f62b9d4
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/parent
+@@ -0,0 +1,2 @@
++..
++../../../../../../../arch/riscv/rv32imac/multilib/ilp32d
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/systemd/eapi b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/systemd/eapi
+new file mode 100644
+index 00000000000..7ed6ff82de6
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/systemd/eapi
+@@ -0,0 +1 @@
++5
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/systemd/parent b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/systemd/parent
+new file mode 100644
+index 00000000000..f7739b40587
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/multilib/ilp32d/systemd/parent
+@@ -0,0 +1,2 @@
++..
++../../../../../../../../targets/systemd
+diff --git a/profiles/default/linux/riscv/20.0/rv32imac/multilib/parent b/profiles/default/linux/riscv/20.0/rv32imac/multilib/parent
+new file mode 100644
+index 00000000000..f3229c5b987
+--- /dev/null
++++ b/profiles/default/linux/riscv/20.0/rv32imac/multilib/parent
+@@ -0,0 +1 @@
++..
+diff --git a/profiles/desc/abi_riscv.desc b/profiles/desc/abi_riscv.desc
+new file mode 100644
+index 00000000000..7e4e75d5b3b
+--- /dev/null
++++ b/profiles/desc/abi_riscv.desc
+@@ -0,0 +1,9 @@
++# Copyright 1999-2013 Gentoo Foundation.
++# Distributed under the terms of the GNU General Public License v2
++
++# This file contains descriptions of ABI_RISCV USE_EXPAND flags.
++
++# Keep it sorted. Please do not add anything without prior discussion
++# on gentoo-dev.
++ilp32 - 32-bit soft-float abi libraries
++ilp32d - 32-bit hard-float abi libraries
+diff --git a/profiles/profiles.desc b/profiles/profiles.desc
+index 7573dc09b58..3737ebdded2 100644
+--- a/profiles/profiles.desc
++++ b/profiles/profiles.desc
+@@ -232,6 +232,14 @@ riscv		default/linux/riscv/20.0/rv64gc/lp64/desktop/systemd			dev
+ riscv		default/linux/riscv/20.0/rv64gc/lp64/systemd				stable
+ riscv		default/linux/riscv/20.0/rv64gc/multilib				exp
+ riscv		default/linux/riscv/20.0/rv64gc/multilib/systemd			exp
++riscv		default/linux/riscv/20.0/rv32imac/ilp32					exp
++riscv		default/linux/riscv/20.0/rv32imac/ilp32/systemd				exp
++riscv		default/linux/riscv/20.0/rv32imac/ilp32d				exp
++riscv		default/linux/riscv/20.0/rv32imac/ilp32d/systemd			exp
++riscv		default/linux/riscv/20.0/rv32imac/multilib/ilp32			exp
++riscv		default/linux/riscv/20.0/rv32imac/multilib/ilp32/systemd		exp
++riscv		default/linux/riscv/20.0/rv32imac/multilib/ilp32d			exp
++riscv		default/linux/riscv/20.0/rv32imac/multilib/ilp32d/systemd		exp
+ 
+ # S390 Profiles
+ # @MAINTAINER: s390@gentoo.org
